@@ -6,13 +6,14 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
-// 2016/10/13 ver0.0 製作開始
+// 2016/10/13 version 0.01 製作開始、一応動くものができた
+// 2016/10/16 version 1.01 リリース
 // 
 // --------------------------------------------------------------------------
 /*:
  * @plugindesc アイテムやスキルの使用と同時に自動的にメニュー画面を閉じるようにします。
  * @author amderbar
- * @version 0.01 2016/10/13 製作開始、一応動くものができた
+ * @version 1.01 2016/10/16 リリース
  * 
  * @help
  * アイテムやスキルの使用と同時に自動的にメニュー画面を閉じるようにします。
