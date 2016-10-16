@@ -28,7 +28,7 @@
 */
 
 (function () {
-    console.log('FlG_AutoMenuExitByItemUse loaded');
+    // console.log('FlG_AutoMenuExitByItemUse loaded');
     // プラグイン引数の取得
     var parameters = PluginManager.parameters('FlG_AutoMenuExitByItemUse');
     var probeId = Number(parameters['probeID']);
