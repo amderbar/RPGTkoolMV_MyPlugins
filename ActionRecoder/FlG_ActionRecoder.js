@@ -6,145 +6,180 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
-// 2016/03/10 ver1.0 プラグイン公開
+// 2016/09/13 version 0.01 製作開始
+// 2016/10/16 version 1.01 リリース
 // 
 // --------------------------------------------------------------------------
 /*:
- * @plugindesc プレイヤーの行動を記録し読み出すためのプラグインコマンドを提供します
+ * @plugindesc プレイヤーの操作を記録し読み出すためのプラグインコマンドを提供します
  * @author amderbar
- * @version 0.01 2016/9/13 製作開始
+ * @version 1.01 2016/10/16 リリース版
  * 
  * @help
- * プレイヤーの行動を記録し読み出すためのプラグインコマンドを提供します。
+ * プレイヤーの操作をパーティ内先頭アクターの行動として記録し、
+ * 読み出すためのプラグインコマンドを提供します。
  * 
- * @param charNum
- * @desc 記録対象となるキャラクターの人数です。
+ * アクターの行動は「アクションID」という数値として記録されます。
+ * なおIDと行動の対応づけは各自で行ってください。
+ * 
+ * なおアイテムおよびスキルを使用した場合ついてはプラグインパラメーターに
+ * 検出用スイッチ番号とウォッチ用の変数番号を指定することで
+ * 「アイテムないしスキルを使用したかどうか」と
+ * 「使用したアイテムないしスキルのID」を得ることができます。
+ * ただし存在しないスイッチや変数の番号が指定された場合、この機能は無視されます。
+ * 
+ * # コマンド一覧
+ * FLG_READ actorID:
+ *     記録されたアクターの行動を読み出し、プラグインパラメーターで指定された番号の
+ *     ゲーム内変数に代入します。
+ *     引数「actorID」では、どのアクターの行動を読み出すかをアクターIDで指定します。
+ * FLG_WRITE actionID: 
+ *     アクターの行動をアクションIDの形で記録します。行動主体であるアクターはその時点で
+ *     パーティの先頭にいるアクターが選ばれます。
+ *     引数「actionID」で指定された数値が実際には記録されます。
+ * FLG_FORWARD:
+ *     プラグインで保持してるデータテーブルの読み書きヘッダ位置を一つ進めます。
+ * FLG_REWIND:
+ *     プラグインで保持してるデータテーブルの読み書きヘッダ位置を先頭に戻します。
+ * 
+ * @param returnValiable
+ * @desc 読み出し時に値を受け渡すゲーム内変数の番号です。
  * @default 1
  * 
+ * @param skill_probe
+ * @desc そのタイミングでアクターがスキルを使用したかどうかを検出するために使用するスイッチの番号です。
+ * @default 0
+ * 
+ * @param item_probe
+ * @desc そのタイミングでアクターがアイテムを使用したかどうかを検出するために使用するスイッチの番号です。
+ * @default 0
+ * 
+ * @param uesed_item_ID_valiable
+ * @desc アクターがアイテムやスキルを使用していた場合、そのIDを読み出すためのゲーム内変数の番号です。
+ * @default 0
 */
 
 (function () {
-    console.log('FlG_ActionRecoder loaded');
+    // console.log('FlG_ActionRecoder loaded');
     // プラグイン引数の取得
     var parameters = PluginManager.parameters('FlG_ActionRecoder');
-    var charNum = Number(parameters['charNum']);
+    var returnValiable = Number(parameters['returnValiable']);
+    var usedItemIdPan = Number(parameters['uesed_item_ID_valiable']);
+    var itemProbe = Number(parameters['item_probe']);
+    var skillProbe = Number(parameters['skill_probe']);
 
+    // --------------------
     // 情報格納用クラスの定義
+    // --------------------
     var FlG_ActionRecoder = function () {
         this.initialize.apply(this, arguments);
     };
 
-    FlG_ActionRecoder.prototype.initialize = function() {
-        this._isActive = false;
-        this._target = null;
-        this._data = [];
-        this._NPC_events = [];
-        this._whead = 0;
-        this._rhead = 0;
+    // 初期化関数
+    FlG_ActionRecoder.prototype.initialize = function(pan, itemPan, itemProbe, skillProbe) {
+        this._pan = {};
+        this._pan.pan = pan;
+        this._pan.itempan = itemPan;
+        this._pan.itemProbe = itemProbe;
+        this._pan.skillProbe = skillProbe;
+        this._head = 0;
+        this._actionData = [];
+        this._usedItemData = [];
     };
 
-    FlG_ActionRecoder.prototype.mock = function() {
-        return true;
-    };
-
-    FlG_ActionRecoder.prototype.registerChar = function(actorId, eve) {
-        this._data[actorId] = [];
-        this._NPC_events[actorId] = eve;
-    };
-
-    FlG_ActionRecoder.prototype.NPCs = function() {
-        return this._NPC_events;
-    };
-
-    FlG_ActionRecoder.prototype.activeate = function(actorId) {
-        this._isActive = true;
-        if (actorId) {
-            this.setTarget(actorId);
-        }
-    };
-
-    FlG_ActionRecoder.prototype.deactiveate = function() {
-        this._isActive = false;
-        this._target = null;
-    };
-
-    FlG_ActionRecoder.prototype.isActive = function() {
-        return this._isActive;
-    };
-
-    FlG_ActionRecoder.prototype.setTarget = function(actorId) {
-        this._target = actorId;
-    };
-
-    FlG_ActionRecoder.prototype.target = function() {
-        return this._target;
-    };
-
-    FlG_ActionRecoder.prototype.rewind = function() {
-        this._whead = 0;
-        this._rhead = 0;
-        console.log(this._whead, this._rhead);
-    };
-
-    FlG_ActionRecoder.prototype.register = function(eve, args) {
-        var tgt = this.target();
-        if (this._data[tgt].length > this._whead) {
-            this._data[tgt][this._whead] = [eve, args];
-        } else {
-            while (this._data[tgt].length < this._whead) {
-                this._data[tgt].push([this.mock, []]);
-            }
-            this._data[tgt].push([eve, args]);
-        }
-        this._whead++;
-        console.log(this._data);
-    };
-
-    FlG_ActionRecoder.prototype.play = function(actorId) {
-        console.log(actorId);
-        if (this._data[actorId].length > this._rhead) {
-            var recode = this._data[actorId][this._rhead];
-            console.log(recode[0].name);
-            console.log(typeof this.NPCs[actorId][recode[0].name]);
-            if (typeof this.NPCs[actorId][recode[0].name] === 'undefined') {
-                recode[0].apply(this.NPCs[actorId], recode[1]);
-            } else {
-                this.NPCs[actorId].apply(this.NPCs[actorId],recode[1]);
-            }
-        }
-        this._rhead++;
-    };
-
-    FlG_ActionRecoder.prototype.data = function() {
-        return this._data;
-    };
-
-    // インスタンス生成
-    if(typeof $recoder === "undefined") {
-        $recoder = new FlG_ActionRecoder(charNum);
+    // 追加初期化用。指定アクターの記憶領域を作成
+    FlG_ActionRecoder.prototype.registerActor = function(actorId) {
+        this._actionData[actorId] = [];
+        this._usedItemData[actorId] = [];
     }
 
-    // プラグインコマンド
+    // データ受け渡し用ゲーム内変数番号のゲッター
+    FlG_ActionRecoder.prototype.pan = function() {
+        return this._pan;
+    }
+
+    // 内部読み書きヘッダを一つ進める関数
+    FlG_ActionRecoder.prototype.forward = function() {
+        this._head ++;
+    };
+
+    // 内部読み書きヘッダを最初に戻す関数
+    FlG_ActionRecoder.prototype.rewind = function() {
+        this._head = 0;
+    };
+
+    // データ記録関数
+    FlG_ActionRecoder.prototype.write = function(actorId, actionId) {
+        this._actionData[actorId][this._head] = actionId;
+    };
+
+    // アイテム、スキル使用データ記録関数
+    FlG_ActionRecoder.prototype.writeItem = function(actorId, itemType, itemID) {
+        this._usedItemData[actorId][this._head] = {'itemType': itemType, 'itemID': itemID};
+    };
+
+    // データ読み出し関数
+    FlG_ActionRecoder.prototype.read = function(actorId) {
+        var actionId = this._actionData[actorId][this._head];
+        return actionId;
+    };
+
+    // アイテム、スキル使用データ読み出し関数
+    FlG_ActionRecoder.prototype.readItem = function(actorId) {
+        var usedItem = this._usedItemData[actorId][this._head];
+        if (typeof usedItem === "undefined") {
+            usedItem = {'itemType': null, 'itemID': null};
+        }
+        return usedItem;
+    };
+
+    // --------------------
+    // インスタンス生成
+    // --------------------
+    if(typeof $recoder === "undefined") {
+        $recoder = new FlG_ActionRecoder(returnValiable, usedItemIdPan, itemProbe, skillProbe);
+    }
+
+    // マップイベント初期化関数で追加の初期化処理を呼び出す
+    var _Game_Map_setupEvents = Game_Map.prototype.setupEvents;
+    Game_Map.prototype.setupEvents = function () {
+        _Game_Map_setupEvents.call(this);
+        for (var actor of $dataActors) {
+            if (actor) {
+                $recoder.registerActor(actor.id);
+            }
+        }
+    }
+
+    // --------------------
+    // プラグインコマンドの実装
+    // --------------------
     var _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
     Game_Interpreter.prototype.pluginCommand = function (command, args) {
         _Game_Interpreter_pluginCommand.call(this, command, args);
         var command = (command || '').toUpperCase();
         switch (command) {
-            case 'FLG_DEQUEUE':
-                console.log('flg_dequeue called');
-                $recoder.play(Number(args[0]));
+            case 'FLG_READ':
+                var actorId = Number(args[0]);
+                var pan = $recoder.pan();
+                var usedItem = $recoder.readItem(actorId);
+                if (usedItem.itemType == 'skill') {
+                    $gameSwitches.setValue(pan.skillProbe, true);
+                } else if (usedItem.itemType == 'item') {
+                    $gameSwitches.setValue(pan.itemProbe, true);
+                }
+                $gameVariables.setValue(pan.itempan, usedItem.itemID);
+                console.log($gameVariables.value(pan.itempan));
+                $gameVariables.setValue(pan.pan, $recoder.read(actorId));
                 break;
-            case 'FLG_ENQUEUE':
-                console.log('flg_enqueue called');
-                console.log($gameParty.members()[0]._actorId);
-                $recoder.activeate($gameParty.members()[0]._actorId);
+            case 'FLG_WRITE':
+                var actionId = Number(args[0]);
+                $recoder.write($gameParty.members()[0]._actorId, actionId);
                 break;
-            case 'FLG_CALMDOWN':
-                console.log('flg_calmdown called');
-                $recoder.deactiveate();
+            case 'FLG_FORWARD':
+                $recoder.forward();
                 break;
             case 'FLG_REWIND':
-                console.log('flg_rewind called');
                 $recoder.rewind();
                 break;
             default:
@@ -153,50 +188,21 @@
         return true;
     };
 
+    // --------------------
     // アイテム、スキル使用関数の改造
-    var _Game_Battler_prototype_useItem = Game_Battler.prototype.useItem;
+    // アイテム、スキルが使用されたらそれを記録
+    // --------------------
+    var _Game_Battler_useItem = Game_Battler.prototype.useItem;
     Game_Battler.prototype.useItem = function(item) {
-        console.log(item);
-        _Game_Battler_prototype_useItem.call(this, item);
-        if ($recoder._isActive) {
-            $recoder.register(_Game_Battler_prototype_useItem, [item]);
+        _Game_Battler_useItem.call(this, item);
+        console.log(this);
+        var itemType;
+        if (DataManager.isSkill(item)) {
+            itemType = 'skill';
+        } else if (DataManager.isItem(item)) {
+            itemType = 'item';
         }
+        $recoder.writeItem(this._actorId, itemType, item.id);
     }
-
-    // マップイベント初期化関数の改造
-    var _Game_Map_setupEvents = Game_Map.prototype.setupEvents;
-    Game_Map.prototype.setupEvents = function () {
-        _Game_Map_setupEvents.call(this);
-        this.events().forEach(function(eve) {
-            var actorTag = $dataMap.events[eve._eventId].note.match(/<actor:(.+)>/);
-            if (actorTag && actorTag[1]) {
-                var actorId = Number(actorTag[1]);
-                $recoder.registerChar(actorId, eve);
-            }
-        }, this);
-        console.log($recoder.data());
-    }
-
-    //=========================================================================
-    // Game_Player
-    //  ・移動実行処理を再定義します。
-    //
-    //=========================================================================
-    var _Game_Player_executeMove = Game_Player.prototype.executeMove;
-    Game_Player.prototype.executeMove = function(direction) {
-       _Game_Player_executeMove.call(this, direction);
-       if ($recoder._isActive) {
-           $recoder.register(_Game_Player_executeMove, [direction]);
-       }
-    };
-   
-    // イベントコマンド「移動ルートの設定」で設定された移動の実行関数再定義
-    var _Game_Character_prototype_forceMoveRoute = Game_Character.prototype.forceMoveRoute;
-    Game_Character.prototype.forceMoveRoute = function(moveRoute) {
-        _Game_Character_prototype_forceMoveRoute.call(this, moveRoute);
-        if ($recoder._isActive) {
-            $recoder.register(_Game_Character_prototype_forceMoveRoute, [moveRoute]);
-        }
-    };
 
 })();
