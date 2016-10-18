@@ -1,0 +1,12 @@
+# ツクールMVのランタイムコード仕様に関するメモ書き
+
+## メニュー画面を閉じる際の処理について
+メニューに限らずゲームの進行をつかさどるのはSceneManegerというクラス。
+SceneManager._stackという配列に蓄えられたSceneオブジェクトが順次実行される。
+メニュー画面はSceneオブジェクトの一つ(Scene_Menu)。
+Sceneオブジェクトはそれぞれ作成時にcreateCommandWindow()というメソッドでイベントハンドラを設定され、イベントに応じたハンドラ関数が紐づけられている。
+キャンセルボタンを押したときに発生するイベントは'cancel'で、紐づけられたハンドラ関数はそのSceneオブジェクトのpopSecen()。
+この関数自体はSceneオブジェクトのスーパークラスであるScene_Baseで定義されていて関数内ではSceneManager.pop()を実行する。
+SceneManager.pop()はSceneManager._stackから次のSceneオブジェクトを取って(pop)きて、次のSceneに以降するという働きを持つ。
+これは推測になるが、メニュー系のSceneは次のSceneとして直前と同じSceneが設定されているようだ。
+というのもSceneManager.pop()を挟むことでスキル選択画面からはメニュー画面トップに、メニュー画面トップからはフィールドマップに戻ることができる。
