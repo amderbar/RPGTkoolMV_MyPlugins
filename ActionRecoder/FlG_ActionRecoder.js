@@ -29,17 +29,17 @@
  * ただし存在しないスイッチや変数の番号が指定された場合、この機能は無視されます。
  * 
  * # コマンド一覧
- * FLG_READ actorID:
+ * FLG_AR_READ actorID:
  *     記録されたアクターの行動を読み出し、プラグインパラメーターで指定された番号の
  *     ゲーム内変数に代入します。
  *     引数「actorID」では、どのアクターの行動を読み出すかをアクターIDで指定します。
- * FLG_WRITE actionID: 
+ * FLG_AR_WRITE actionID: 
  *     アクターの行動をアクションIDの形で記録します。行動主体であるアクターはその時点で
  *     パーティの先頭にいるアクターが選ばれます。
  *     引数「actionID」で指定された数値が実際には記録されます。
- * FLG_FORWARD:
+ * FLG_AR_FORWARD:
  *     プラグインで保持してるデータテーブルの読み書きヘッダ位置を一つ進めます。
- * FLG_REWIND:
+ * FLG_AR_REWIND:
  *     プラグインで保持してるデータテーブルの読み書きヘッダ位置を先頭に戻します。
  * 
  * @param returnValiable
@@ -71,7 +71,7 @@
     // --------------------
     // 情報格納用クラスの定義
     // --------------------
-    var FlG_ActionRecoder = function () {
+    function FlG_ActionRecoder() {
         this.initialize.apply(this, arguments);
     };
 
@@ -159,7 +159,7 @@
         _Game_Interpreter_pluginCommand.call(this, command, args);
         var command = (command || '').toUpperCase();
         switch (command) {
-            case 'FLG_READ':
+            case 'FLG_AR_READ':
                 var actorId = Number(args[0]);
                 var pan = $recoder.pan();
                 var usedItem = $recoder.readItem(actorId);
@@ -172,14 +172,14 @@
                 console.log($gameVariables.value(pan.itempan));
                 $gameVariables.setValue(pan.pan, $recoder.read(actorId));
                 break;
-            case 'FLG_WRITE':
+            case 'FLG_AR_WRITE':
                 var actionId = Number(args[0]);
                 $recoder.write($gameParty.members()[0]._actorId, actionId);
                 break;
-            case 'FLG_FORWARD':
+            case 'FLG_AR_FORWARD':
                 $recoder.forward();
                 break;
-            case 'FLG_REWIND':
+            case 'FLG_AR_REWIND':
                 $recoder.rewind();
                 break;
             default:
