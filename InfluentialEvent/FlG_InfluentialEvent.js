@@ -15,15 +15,18 @@
  * @version 0.01 2016/10/16 製作開始
  * 
  * @help
- * プラグインの詳細説明です。
+ * 他のイベントに接触することで相手のイベントを起動できる特殊なイベントを作ります。
  * 
- * # コマンド一覧
- * FLG_PLUGIN_COMMAND:
- *     プラグインコマンドの説明です。
+ * ## 使い方
+ * 対象のイベントのメモ欄に「<actor:XXXXX>」という形式のNoteTagを記入します。
+ * (角括弧を含めて書いてください。なお「XXXXX」部分は数値を想定していますが、
+ *  本プラグインでは使用しません)
+ * そのうえで、本プラグインを有効化してください。
  * 
- * @param pligin_param
- * @desc プラグインパラメーターの説明です。
- * @default 0
+ * ## その他
+ * 対象のイベントはアクターに対応するキャラクターが存在するNPCを想定しています。
+ * そのイベント自身に「プレイヤー接触」や「決定ボタン」をトリガーとするイベントが
+ * 指定されていても正常に動くはずです。
  * 
 */
 (function () {
@@ -46,15 +49,18 @@
 
     // 初期化関数
     FlG_InfluentialEvent.prototype.initialize = function(mapeve) {
-        this._anima = new Game_Player();
-        // Object.assain(this, mapeve);
+          for (var prop in mapeve) {
+            if (mapeve.hasOwnProperty(prop)) {
+                this[prop] = mapeve[prop];
+            }
+        }
     }
 
     // イベントに接触した際にプレイヤーに成りすます関数
     var _Game_Event_checkEventTriggerTouch = FlG_InfluentialEvent.prototype.checkEventTriggerTouch;
     FlG_InfluentialEvent.prototype.checkEventTriggerTouch = function(x, y) {
         _Game_Event_checkEventTriggerTouch.call(this, x, y);
-        this._anima.checkEventTriggerTouch.call(this, x, y);
+        Game_Player.prototype.checkEventTriggerTouch.call(this, x, y);
     }
 
     // 自分はイベントを起動させる権限があるぞと主張する関数
@@ -64,7 +70,7 @@
 
     // プレイヤーに成りすましてイベントを起動させる関数
     FlG_InfluentialEvent.prototype.startMapEvent = function(x, y, triggers, normal) {
-        this._anima.startMapEvent.call(this, x, y, triggers, normal);
+        Game_Player.prototype.startMapEvent.call(this, x, y, triggers, normal);
     };
 
     // 自分が他のイベントと衝突してるかどうかを調べる関数
@@ -74,15 +80,42 @@
         });
     };
 
-// Game_Player.prototype.checkEventTriggerHere = function(triggers) {
-//     if (this.canStartLocalEvents()) {
-//         this.startMapEvent(this.x, this.y, triggers, false);
-//     }
-// };
+    // アップデート関数の書き換え
+    var _Game_Event_update = FlG_InfluentialEvent.prototype.update;
+    FlG_InfluentialEvent.prototype.update = function() {
+        var wasMoving = this.isMoving();
+        _Game_Event_update.call(this);
+        if (!this.isMoving()) {
+            this.updateNonmoving(wasMoving);
+        }
+    };
+
+    // 移動終了時に呼ばれる関数。Game_Playerのものよりも簡素にした
+    FlG_InfluentialEvent.prototype.updateNonmoving = function(wasMoving) {
+        if (!$gameMap.isEventRunning()) {
+            if (wasMoving) {
+                this.checkEventTriggerHere([1,2]);
+                if ($gameMap.setupStartingEvent()) {
+                    return;
+                }
+            }
+            // if (this.triggerAction()) {
+            //     return;
+            // }
+            if (!wasMoving) {
+                $gameTemp.clearDestination();
+            }
+        }
+    };
+
+    // イベントに乗った際にプレイヤーに成りすます関数
+    FlG_InfluentialEvent.prototype.checkEventTriggerHere = function(triggers) {
+        Game_Player.prototype.checkEventTriggerHere.call(this, triggers)
+    };
 
     // --------------------
     // マップイベント初期化関数の改造
-    // メモ欄に<actor:XXXXX>のNoteTagが指定されているイベントを上記ラッパークラスオブジェクトに置換する。
+    // メモ欄に<actor:XXXXX>のNoteTagが指定されているイベントオブジェクトを上記のクラスオブジェクトで置換する。
     // --------------------
     var _Game_Map_setupEvents = Game_Map.prototype.setupEvents;
     Game_Map.prototype.setupEvents = function () {
@@ -91,8 +124,7 @@
             var mapeve = $gameMap._events[eveNo];
             var eveData = $dataMap.events[mapeve.eventId()];
             if(typeof eveData.meta.actor !== "undefined") {
-                var influEve = new FlG_InfluentialEvent(mapeve);
-                $gameMap._events[eveNo] = Object.assign(influEve, mapeve);
+                $gameMap._events[eveNo] = new FlG_InfluentialEvent(mapeve);
             }
         }
     }
