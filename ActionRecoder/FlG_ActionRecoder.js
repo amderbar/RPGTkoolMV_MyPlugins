@@ -6,6 +6,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
+// 2016/10/23 version 1.10 セーブデータをロードしたらエラー落ちするようになる不具合に対応
 // 2016/10/23 version 1.01 リファクタリングとバージョン番号規則の変更
 // 2016/10/17 version 1.00 初版の完成
 // 2016/09/13 version 0.00 製作開始
@@ -14,7 +15,7 @@
 /*:
  * @plugindesc プレイヤーの操作を記録し読み出すためのプラグインコマンドを提供します
  * @author amderbar
- * @version 1.01
+ * @version 1.10
  * 
  * @help
  * プレイヤーの操作をパーティ内先頭アクターの行動として記録し、
@@ -59,7 +60,6 @@
  * @desc アクターがアイテムやスキルを使用していた場合、そのIDを読み出すためのゲーム内変数の番号です。
  * @default 0
 */
-
 (function () {
     'use strict';
     // console.log('FlG_ActionRecoder loaded');
@@ -171,7 +171,6 @@
                     $gameSwitches.setValue(pan.itemProbe, true);
                 }
                 $gameVariables.setValue(pan.itempan, usedItem.itemID);
-                console.log($gameVariables.value(pan.itempan));
                 $gameVariables.setValue(pan.pan, $recoder.read(actorId));
                 break;
             case 'FLG_AR_WRITE':
@@ -197,7 +196,6 @@
     var _Game_Battler_useItem = Game_Battler.prototype.useItem;
     Game_Battler.prototype.useItem = function(item) {
         _Game_Battler_useItem.call(this, item);
-        console.log(this);
         var itemType;
         if (DataManager.isSkill(item)) {
             itemType = 'skill';
@@ -205,6 +203,41 @@
             itemType = 'item';
         }
         $recoder.writeItem(this._actorId, itemType, item.id);
+    }
+
+    // --------------------
+    // 既存ランタイム関数の改造/セーブデータの追加用
+    // 初期値の設定。ゲーム開始時に呼ばれる。
+    // --------------------
+    // var createGameObjects = DataManager.createGameObjects;
+    // DataManager.createGameObjects = function() {
+    //     createGameObjects.call(this);
+    //     $gameFlgActionRecoder = new FlG_SavePlugin();
+    // };
+
+    // --------------------
+    // 既存ランタイム関数の改造/セーブデータの追加用
+    // セーブデータを作る静的メソッドに、登録されたプラグインのデータを注入。
+    // --------------------
+    var _DataManager_makeSaveContents = DataManager.makeSaveContents;
+    DataManager.makeSaveContents = function() {
+        // 本来の関数処理呼び出し
+        var contents = _DataManager_makeSaveContents.call(this);
+        // 自身のデータを追加
+        contents.flgActionRecoder = $recoder;
+        return contents;
+    }
+
+    // // --------------------
+    // // 既存ランタイム関数の改造/セーブデータの追加用
+    // // セーブデータのロードメソッドに、登録されたプラグインのデータロードを追加。
+    // // --------------------
+    var _DataManager_extractSaveContents = DataManager.extractSaveContents;
+    DataManager.extractSaveContents = function(contents) {
+        // 本来の関数処理呼び出し
+        _DataManager_extractSaveContents.call(this, contents);
+        // 独自クラスはプロトタイプ以上のデータが反映されないので、別途作成したオブジェクトにデータをアサイン。
+        $recoder = Object.assign($recoder, contents.flgActionRecoder);
     }
 
 })();
