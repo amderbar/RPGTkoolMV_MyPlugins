@@ -6,14 +6,15 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
-// 2016/09/13 version 0.01 製作開始
-// 2016/10/17 version 1.01 リリースの完成
+// 2016/10/23 version 1.01 リファクタリングとバージョン番号規則の変更
+// 2016/10/17 version 1.00 初版の完成
+// 2016/09/13 version 0.00 製作開始
 // 
 // --------------------------------------------------------------------------
 /*:
  * @plugindesc プレイヤーの操作を記録し読み出すためのプラグインコマンドを提供します
  * @author amderbar
- * @version 1.01 2016/10/17 リリース版
+ * @version 1.01
  * 
  * @help
  * プレイヤーの操作をパーティ内先頭アクターの行動として記録し、
@@ -60,6 +61,7 @@
 */
 
 (function () {
+    'use strict';
     // console.log('FlG_ActionRecoder loaded');
     // プラグイン引数の取得
     var parameters = PluginManager.parameters('FlG_ActionRecoder');
@@ -137,7 +139,7 @@
     // インスタンス生成
     // --------------------
     if(typeof $recoder === "undefined") {
-        $recoder = new FlG_ActionRecoder(returnValiable, usedItemIdPan, itemProbe, skillProbe);
+        var $recoder = new FlG_ActionRecoder(returnValiable, usedItemIdPan, itemProbe, skillProbe);
     }
 
     // マップイベント初期化関数で追加の初期化処理を呼び出す
