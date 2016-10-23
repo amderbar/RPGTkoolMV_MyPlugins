@@ -26,7 +26,17 @@
  * @default 0
  * 
 */
+
+// 追加するセーブデータの変数
+// セーブデータ類はグローバルスコープに定義されているので、クロージャ[function(){...}();]の外に出す
+// 他のプラグインとかぶらないように名前を決める必要がある
+// if (typeof $gameFlgPluginsData === "undefined") {
+//     var $gameFlgPluginsData = null;
+// } else {
+//     throw new Error("The global valiable '$gameFlgPluginsData' has been already defined.");
+// }
 (function () {
+    'use strict';
     // console.log('FlG_TkoolMVPluginTemplate');
     // プラグイン引数の取得
     var parameters = PluginManager.parameters('FlG_TkoolMVPluginTemplate');
@@ -88,6 +98,45 @@
         _GameClass_method.call(this, arg);
         // 後処理
 
+    }
+
+    // --------------------
+    // 既存ランタイム関数の改造
+    // 初期値の設定。ゲーム開始時に呼ばれる。
+    // --------------------
+    // var createGameObjects = DataManager.createGameObjects;
+    // DataManager.createGameObjects = function() {
+    //     createGameObjects.call(this);
+    //     $gameFlgPluginsData = {};
+    // };
+
+    // --------------------
+    // 既存ランタイム関数の改造
+    // セーブデータを作る静的メソッドに、登録されたプラグインのデータを注入。
+    // --------------------
+    var _DataManager_makeSaveContents = DataManager.makeSaveContents;
+    DataManager.makeSaveContents = function() {
+        // 本来の関数処理呼び出し
+        var contents = _DataManager_makeSaveContents.call(this, arg);
+        // 自身のデータを追加
+        contents.flgPluginsData = $flg;
+        // createGameObjectsでグローバル変数としてnewしている場合。
+        // contents.flgPluginsData = $gameFlgPluginsData;
+        return contents;
+    }
+
+    // --------------------
+    // 既存ランタイム関数の改造
+    // セーブデータのロードメソッドに、登録されたプラグインのデータロードを追加。
+    // --------------------
+    var _DataManager_extractSaveContents = DataManager.extractSaveContents;
+    DataManager.extractSaveContents = function(contents) {
+        // 本来の関数処理呼び出し
+        _DataManager_extractSaveContents.call(this, contents);
+        // 独自クラスはプロトタイプ以上のデータが反映されないので、別途作成したオブジェクトにデータをアサイン。
+        $flg = Object.assign($flg, contents.flgPluginsData);
+        // createGameObjectsでグローバル変数としてnewしている場合はそのまま代入でも可。
+        // $gameFlgPluginsData = contents.flgPluginsData;
     }
 
 })();
