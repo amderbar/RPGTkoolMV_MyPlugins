@@ -6,14 +6,15 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
-// 2016/10/16 version 0.01 製作開始
-// 2016/10/18 version 1.01 リリースの完成
+// 2016/10/23 version 1.01 リファクタリングとバージョン番号規則の変更
+// 2016/10/18 version 1.00 初版の完成
+// 2016/10/16 version 0.00 製作開始
 // 
 // --------------------------------------------------------------------------
 /*:
  * @plugindesc イベント同士の接触で「プレイヤー接触」のイベントを起動できるようにします。
  * @author amderbar
- * @version 1.01 2016/10/18 リリース版
+ * @version 1.01
  * 
  * @help
  * 他のイベントに接触することで相手のイベントを起動できる特殊なイベントを作ります。
@@ -31,6 +32,7 @@
  * 
 */
 (function () {
+    'use strict';
     // console.log('FlG_InfluentialEvent');
     // プラグイン引数の取得
     // var parameters = PluginManager.parameters('FlG_InfluentialEvent');
@@ -38,7 +40,7 @@
 
     // --------------------
     // 独自クラスの定義
-    // 接触した相手のイベントを起動できるGame_Eventのラッパークラス
+    // Game_Eventを継承しつつ接触した相手のイベントを起動できる特殊クラス
     // --------------------
     function FlG_InfluentialEvent() {
         this.initialize.apply(this, arguments);
@@ -50,7 +52,7 @@
 
     // 初期化関数
     FlG_InfluentialEvent.prototype.initialize = function(mapeve) {
-          for (var prop in mapeve) {
+        for (var prop in mapeve) {
             if (mapeve.hasOwnProperty(prop)) {
                 this[prop] = mapeve[prop];
             }
@@ -82,10 +84,9 @@
     };
 
     // アップデート関数の書き換え
-    var _Game_Event_update = FlG_InfluentialEvent.prototype.update;
     FlG_InfluentialEvent.prototype.update = function() {
         var wasMoving = this.isMoving();
-        _Game_Event_update.call(this);
+        Game_Event.prototype.update.call(this);
         if (!this.isMoving()) {
             this.updateNonmoving(wasMoving);
         }
@@ -100,6 +101,7 @@
                     return;
                 }
             }
+            // 後々使うかもしれない部分
             // if (this.triggerAction()) {
             //     return;
             // }
