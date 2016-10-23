@@ -6,14 +6,15 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
+// 2016/10/23 version 1.01 リファクタリングとバージョン番号規則の変更
+// 2016/10/16 version 1.00 初版の完成
 // 2016/10/13 version 0.01 製作開始、一応動くものができた
-// 2016/10/16 version 1.01 リリース
 // 
 // --------------------------------------------------------------------------
 /*:
  * @plugindesc アイテムやスキルの使用と同時に自動的にメニュー画面を閉じるようにします。
  * @author amderbar
- * @version 1.01 2016/10/16 リリース
+ * @version 1.01
  * 
  * @help
  * アイテムやスキルの使用と同時に自動的にメニュー画面を閉じるようにします。
@@ -28,6 +29,7 @@
 */
 
 (function () {
+    'use strict';
     // console.log('FlG_AutoMenuExitByItemUse loaded');
     // プラグイン引数の取得
     var parameters = PluginManager.parameters('FlG_AutoMenuExitByItemUse');
