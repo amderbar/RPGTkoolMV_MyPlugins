@@ -6,6 +6,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
+// 2016/10/23 version 1.10 セーブデータをロードする際にでエラー落ちする不具合に対応
 // 2016/10/23 version 1.01 リファクタリングとバージョン番号規則の変更
 // 2016/10/18 version 1.00 初版の完成
 // 2016/10/16 version 0.00 製作開始
@@ -14,7 +15,7 @@
 /*:
  * @plugindesc イベント同士の接触で「プレイヤー接触」のイベントを起動できるようにします。
  * @author amderbar
- * @version 1.01
+ * @version 1.10
  * 
  * @help
  * 他のイベントに接触することで相手のイベントを起動できる特殊なイベントを作ります。
@@ -48,7 +49,8 @@
 
     // 継承とコンストラクタの定義
     FlG_InfluentialEvent.prototype = Object.create(Game_Event.prototype);
-    FlG_InfluentialEvent.prototype.constructor = FlG_InfluentialEvent;
+    // あくまでマップイベントとしてセーブされるためにコンストラクタは親クラスと同じにしておく
+    // FlG_InfluentialEvent.prototype.constructor = FlG_InfluentialEvent;
 
     // 初期化関数
     FlG_InfluentialEvent.prototype.initialize = function(mapeve) {
@@ -116,6 +118,18 @@
         Game_Player.prototype.checkEventTriggerHere.call(this, triggers)
     };
 
+    // マップイベントリストのうち特定のイベントを上記クラスにすり替える静的関数
+    FlG_InfluentialEvent.impersonate = function() {
+        for (var eveNo in $gameMap._events) {
+            var mapeve = $gameMap._events[eveNo];
+            if (!mapeve) { continue;}
+            var eveData = $dataMap.events[mapeve.eventId()];
+            if(typeof eveData.meta.actor !== "undefined") {
+                $gameMap._events[eveNo] = new FlG_InfluentialEvent(mapeve);
+            }
+        }
+    };
+
     // --------------------
     // マップイベント初期化関数の改造
     // メモ欄に<actor:XXXXX>のNoteTagが指定されているイベントオブジェクトを上記のクラスオブジェクトで置換する。
@@ -123,13 +137,20 @@
     var _Game_Map_setupEvents = Game_Map.prototype.setupEvents;
     Game_Map.prototype.setupEvents = function () {
         _Game_Map_setupEvents.call(this);
-        for (eveNo in $gameMap._events) {
-            var mapeve = $gameMap._events[eveNo];
-            var eveData = $dataMap.events[mapeve.eventId()];
-            if(typeof eveData.meta.actor !== "undefined") {
-                $gameMap._events[eveNo] = new FlG_InfluentialEvent(mapeve);
-            }
-        }
+        FlG_InfluentialEvent.impersonate();
+        this.refreshTileEvents();
+    }
+
+    // // --------------------
+    // // 既存ランタイム関数の改造/セーブデータの追加用
+    // // セーブデータのロード時に、イベントの整合性を取る。
+    // // --------------------
+    var _DataManager_extractSaveContents = DataManager.extractSaveContents;
+    DataManager.extractSaveContents = function(contents) {
+        // 本来の関数処理呼び出し
+        _DataManager_extractSaveContents.call(this, contents);
+        // 後処理
+        FlG_InfluentialEvent.impersonate();
     }
 
 })();
