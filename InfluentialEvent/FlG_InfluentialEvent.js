@@ -2,7 +2,7 @@
 // 
 // FlG_InfluentialEvent
 // 
-// Copyright (c) amderbar
+// Copyright (c) @amderbar
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
