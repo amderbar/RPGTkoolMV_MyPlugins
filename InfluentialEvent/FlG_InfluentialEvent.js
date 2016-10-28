@@ -6,7 +6,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // 
-// 2016/10/23 version 1.10 セーブデータをロードする際にでエラー落ちする不具合に対応
+// 2016/10/23 version 1.10 セーブデータをロードする際にエラー落ちする不具合に対応
 // 2016/10/23 version 1.01 リファクタリングとバージョン番号規則の変更
 // 2016/10/18 version 1.00 初版の完成
 // 2016/10/16 version 0.00 製作開始
